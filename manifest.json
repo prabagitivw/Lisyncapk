@@ -1,0 +1,21 @@
+{
+    "name": "i-BMS by IVW",
+    "short_name": "i-BMS",
+    "description": "Bluetooth BMS Dashboard by IVW Private Limited",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#3b82f6",
+    "icons": [
+        {
+            "src": "IVW logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "IVW logo.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

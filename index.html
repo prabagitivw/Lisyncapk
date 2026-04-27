@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LiSync Mobile BMS</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="IVW logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-panel">
+            <div class="brand-header">
+                <img src="IVW logo.png" alt="IVW Logo" class="brand-logo">
+                <div class="brand-titles">
+                    <h1>i-BMS</h1>
+                    <div id="val-connection" class="status-indicator disconnected">Disconnected</div>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button id="connectBtn" class="btn primary">Connect</button>
+                <button id="disconnectBtn" class="btn secondary hidden">Disconnect</button>
+            </div>
+        </header>
+
+        <!-- Collapsible Settings -->
+        <details class="settings-panel glass-panel">
+            <summary>Bluetooth Settings</summary>
+            <div class="settings-grid">
+                <div class="input-group">
+                    <label>Service UUID</label>
+                    <input type="text" id="serviceUuid" value="0xff00">
+                </div>
+                <div class="input-group">
+                    <label>TX Characteristic (Write)</label>
+                    <input type="text" id="txUuid" value="0xff02">
+                </div>
+                <div class="input-group">
+                    <label>RX Characteristic (Notify)</label>
+                    <input type="text" id="rxUuid" value="0xff01">
+                </div>
+            </div>
+        </details>
+
+        <main id="dashboard" class="dashboard hidden">
+            <!-- Main SOC Gauge -->
+            <section class="card glass-panel text-center">
+                <div class="gauge-container large">
+                    <svg viewBox="0 0 100 60" class="gauge">
+                        <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" />
+                        <path id="gauge-soc-path" class="gauge-value soc-color" d="M 10 50 A 40 40 0 0 1 90 50" />
+                        <text id="val-soc" x="50" y="45" class="gauge-text">--%</text>
+                        <text x="50" y="58" class="gauge-label">State of Charge</text>
+                    </svg>
+                </div>
+                <div class="basic-info-row">
+                    <span>Rem: <strong id="val-rem-cap">--</strong> Ah</span>
+                    <span>SOH: <strong id="val-soh">--</strong>%</span>
+                    <span>Cycles: <strong id="val-cycles">--</strong></span>
+                </div>
+            </section>
+
+            <!-- Voltage & Current Gauges -->
+            <section class="dual-gauges">
+                <div class="card glass-panel text-center">
+                    <div class="gauge-container">
+                        <svg viewBox="0 0 100 60" class="gauge">
+                            <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" />
+                            <path id="gauge-volt-path" class="gauge-value volt-color" d="M 10 50 A 40 40 0 0 1 90 50" />
+                            <text id="val-voltage" x="50" y="45" class="gauge-text">--</text>
+                            <text x="50" y="58" class="gauge-label">Voltage (V)</text>
+                        </svg>
+                    </div>
+                </div>
+                <div class="card glass-panel text-center">
+                    <div class="gauge-container">
+                        <svg viewBox="0 0 100 60" class="gauge">
+                            <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" />
+                            <path id="gauge-curr-neg" class="gauge-value curr-color" d="M 50 10 A 40 40 0 0 0 10 50" style="stroke-dasharray: 62.83; stroke-dashoffset: 62.83;" />
+                            <path id="gauge-curr-pos" class="gauge-value curr-color" d="M 50 10 A 40 40 0 0 1 90 50" style="stroke-dasharray: 62.83; stroke-dashoffset: 62.83;" />
+                            <text id="val-current" x="50" y="45" class="gauge-text">--</text>
+                            <text x="50" y="58" class="gauge-label">Current (A)</text>
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Condensed Cell Voltages -->
+            <section class="card glass-panel">
+                <div class="section-header">
+                    <h2>Cell Voltages</h2>
+                    <div class="cell-summary">
+                        <span class="tag alert">Max: <span id="val-cell-max">--</span>V</span>
+                        <span class="tag warn">Min: <span id="val-cell-min">--</span>V</span>
+                        <span class="tag success">Avg: <span id="val-cell-avg">--</span>V</span>
+                    </div>
+                </div>
+                <div id="cell-list" class="cell-grid-multiline">
+                    <!-- Dynamic cells -->
+                </div>
+            </section>
+
+            <!-- Condensed Temperatures -->
+            <section class="card glass-panel">
+                <h2>Temperatures</h2>
+                <div class="temp-grid">
+                    <div class="temp-box">
+                        <span class="temp-label">MOSFET</span>
+                        <span class="temp-val" id="val-temp-mos">--°C</span>
+                    </div>
+                    <div class="temp-box">
+                        <span class="temp-label">Ambient</span>
+                        <span class="temp-val" id="val-temp-amb">--°C</span>
+                    </div>
+                </div>
+                <div class="scroll-container mt-2">
+                    <div id="sensor-list" class="flex-row">
+                        <!-- Dynamic sensors -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status Tags -->
+            <section class="card glass-panel">
+                <h2>System Status</h2>
+                <div class="status-grid-2x2">
+                    <div class="status-row">
+                        <span class="status-title">Battery</span>
+                        <div id="status-battery" class="tags">--</div>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-title">Protection</span>
+                        <div id="status-protection" class="tags">None</div>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-title">Alarms</span>
+                        <div id="status-alarms" class="tags">None</div>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-title">MOS/Switch</span>
+                        <div id="status-mos" class="tags">--</div>
+                    </div>
+                </div>
+            </section>
+            
+            <div class="footer-info">
+                IVW Private Limited<br>
+                Device: <span id="val-device-id">--</span> | ID: <span id="val-battery-id">--</span> | <span id="val-timestamp">--</span>
+            </div>
+        </main>
+        
+        <details class="log-panel glass-panel">
+            <summary>Connection Logs</summary>
+            <button id="clearLogsBtn" class="btn secondary small mb-2">Clear Logs</button>
+            <div id="logs" class="logs"></div>
+        </details>
+    </div>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(reg => {
+                    console.log('Service Worker registered!', reg);
+                }).catch(err => {
+                    console.log('Service Worker failed', err);
+                });
+            });
+        }
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>
