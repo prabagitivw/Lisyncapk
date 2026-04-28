@@ -26,6 +26,15 @@
             </div>
         </header>
 
+        <!-- Protocol Selector (Manual Only) -->
+        <section class="glass-panel" style="padding: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">BMS TYPE:</span>
+            <div style="display: flex; gap: 5px;">
+                <button id="btn-mode-ess" class="btn small active" style="padding: 5px 15px; background: var(--accent-color); color: white;">ESS BMS</button>
+                <button id="btn-mode-ev" class="btn small" style="padding: 5px 15px; background: rgba(255,255,255,0.05); color: var(--text-secondary);">Smart BMS</button>
+            </div>
+        </section>
+
         <!-- Collapsible Settings -->
         <details class="settings-panel glass-panel">
             <summary>Bluetooth Settings</summary>
@@ -58,6 +67,7 @@
                 </div>
                 <div class="basic-info-row">
                     <span>Rem: <strong id="val-rem-cap">--</strong> Ah</span>
+                    <span id="label-rated">Rated: <strong id="val-rated-cap">--</strong> Ah</span>
                     <span>SOH: <strong id="val-soh">--</strong>%</span>
                     <span>Cycles: <strong id="val-cycles">--</strong></span>
                 </div>
