@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ibms-v1';
+const CACHE_NAME = 'ibms-v2';
 const ASSETS = [
     './',
     './index.html',
@@ -22,6 +22,7 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 keys.map(key => {
                     if (key !== CACHE_NAME) {
+                        console.log('[SW] Deleting old cache:', key);
                         return caches.delete(key);
                     }
                 })
@@ -31,9 +32,19 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
+// Network First strategy — always try to get fresh code, fall back to cache
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request)
-            .then(response => response || fetch(event.request))
+        fetch(event.request)
+            .then(networkResponse => {
+                // Update cache with fresh response
+                const clone = networkResponse.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                return networkResponse;
+            })
+            .catch(() => {
+                // Offline fallback
+                return caches.match(event.request);
+            })
     );
 });
