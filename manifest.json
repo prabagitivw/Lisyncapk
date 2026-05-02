@@ -1,6 +1,7 @@
 {
     "name": "i-BMS by IVW",
     "short_name": "i-BMS",
+    "version": "2.2.0",
     "description": "Bluetooth BMS Dashboard by IVW Private Limited",
     "start_url": "./index.html",
     "display": "standalone",

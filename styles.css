@@ -53,6 +53,18 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 1rem 1.25rem;
+    gap: 0.5rem;
+}
+
+.brand-header {
+    flex: 1 1 0;
+    min-width: 0; /* allow text to truncate if needed */
+}
+
+.header-controls {
+    flex-shrink: 0;    /* never let buttons get squeezed */
+    display: flex;
+    align-items: center;
 }
 
 .brand-header {
@@ -90,6 +102,12 @@ header {
     cursor: pointer;
     border: none;
     transition: all 0.2s ease;
+    white-space: nowrap; /* never wrap button text */
+}
+/* Connect & Disconnect share the same fixed width so the header never shifts */
+#connectBtn, #disconnectBtn {
+    width: 115px;
+    text-align: center;
 }
 .btn.small { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
 .btn.primary { background-color: var(--accent-color); color: white; }
@@ -223,5 +241,51 @@ h2::before { content: ''; display: inline-block; width: 3px; height: 1.1rem; bac
 .log-entry { display: flex; gap: 0.4rem; }
 .log-time { color: #5eead4; flex-shrink: 0; }
 .log-err { color: #fca5a5; }
+
+/* Device Name Line (above SOC gauge) */
+.device-name-line {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    padding: 2px 0 4px;
+}
+
+/* BLE Device Info Panel */
+.ble-info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ble-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 5px 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+    border: 1px solid var(--panel-border);
+}
+.ble-info-label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.ble-info-val {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: right;
+    word-break: break-all;
+}
+.mono {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #5eead4;
+    letter-spacing: 0.03em;
+}
 
 .hidden { display: none !important; }

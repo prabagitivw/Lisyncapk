@@ -125,4 +125,28 @@ If your IVW BMS uses non-standard UUIDs:
 
 ---
 
+## Changelog
+
+### v2.2.0 — 2026-05-02 *(Current)*
+- **Fix:** JBD Smart BMS cell count now derived exclusively from the 0x04 cell-voltage frame payload length (`response[3] / 2`) — eliminates wrong S-count (e.g. 8S showing as 16S) caused by stale EEPROM config register `response[25]`
+- **Fix:** `response[25]` from 0x03 frame stored as `cell_count_hint` only — never overwrites actual cell count
+- **Fix:** Ambient temperature now correctly reads sensor index 1 (was duplicating MOSFET sensor index 0)
+- **Fix:** SOH defaults to `'--'` for Smart BMS mode (JBD 0x03 has no SOH field)
+- **Fix:** Connect / Disconnect buttons now fixed `115px` width — no layout shift on mobile
+- **Add:** Device name displayed above SOC gauge after connection
+- **Add:** Full dashboard reset on disconnect — gauges, cells, temps, status tags all cleared; JBD state re-initialised; dashboard hidden
+- **Add:** BLE device info panel (hidden, code preserved for future use)
+
+### v2.1.0 — 2026-04-28
+- Passive protocol detection (ESS vs JBD identified by frame start byte, no mode pre-selection required)
+- Manual BMS TYPE toggle (ESS BMS / Smart BMS)
+- Configurable Service / TX / RX UUIDs via Bluetooth Settings panel
+- 200 ms receive buffer timeout for chunked BLE notifications
+- JBD 3-step poll cycle (0x03 Basic Info → 0x04 Cell Voltages → 0x05 Device Name)
+- SVG gauges: SOC, auto-scaled Voltage, bi-directional Current
+- Cell voltage grid, multi-sensor temperature row, protection/alarm/MOS status tags
+- PWA manifest + Service Worker for offline install on Android
+
+---
+
 *IVW Private Limited — Battery Technology Division*

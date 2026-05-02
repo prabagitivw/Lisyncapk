@@ -1,4 +1,4 @@
-// app.js (Version 2.1 - Robust Multi-BMS)
+// app.js (Version 2.2.0 - Cell Count Fix + Clean Disconnect)
 
 // UI Elements
 const connectBtn = document.getElementById('connectBtn');
@@ -25,7 +25,8 @@ let pollInterval = null;
 // Protocol State
 let activePollingMode = 'ess'; // 'ess' or 'ev'
 let jbdStep = 0; 
-let jbdData = { cell_voltages_V: [], temperature_C: [], battery_id: "" };
+// jbdData holds accumulated JBD state across the 3-step poll cycle
+let jbdData = { cell_voltages_V: [], temperature_C: [], battery_id: "", cell_count: 0, SOH_percent: '--' };
 
 // Buffer for incoming data chunks
 let receiveBuffer = new Uint8Array(0);
@@ -175,7 +176,7 @@ disconnectBtn.addEventListener('click', disconnectBluetooth);
 async function connectToBluetooth() {
     try {
         const serviceUuid = parseUuid(serviceUuidInput.value);
-        log("Version 2.1 Connecting...");
+        log("v2.2.0 Connecting...");
         bleDevice = await navigator.bluetooth.requestDevice({ 
             acceptAllDevices: true, 
             optionalServices: [serviceUuid, '00010203-0405-0607-0809-0a0b0c0d1912'] 
@@ -192,9 +193,14 @@ async function connectToBluetooth() {
         connectBtn.classList.add('hidden');
         disconnectBtn.classList.remove('hidden');
         dashboard.classList.remove('hidden');
-        connStatus.textContent = 'Connected: ' + (bleDevice.name || 'BMS');
+        connStatus.textContent = 'Connected: ' + (bleDevice.name || bleDevice.id || 'BMS');
         connStatus.className = 'status-indicator connected';
-        
+        // showDeviceInfo(); // BLE info panel hidden (panel code preserved for future use)
+
+        // Show device name above SOC
+        const stripName = document.getElementById('strip-device-name');
+        if (stripName) stripName.textContent = bleDevice.name || '(No Name)';
+
         startPolling();
     } catch (error) { log('Connection failed: ' + error, true); }
 }
@@ -202,10 +208,90 @@ async function connectToBluetooth() {
 function onDisconnected() {
     log('Disconnected', true);
     stopPolling();
+
+    // Reset BLE state
+    bleDevice = null; bleServer = null;
+    txCharacteristic = null; rxCharacteristic = null;
+    receiveBuffer = new Uint8Array(0);
+
+    // Reset JBD accumulated data
+    jbdData = { cell_voltages_V: [], temperature_C: [], battery_id: '', cell_count: 0, SOH_percent: '--' };
+    jbdStep = 0;
+
+    // Reset gauge tracking
+    dynMaxVoltage = 0; dynMinVoltage = 0; dynMaxCurrent = 50;
+
+    // Header
     connectBtn.classList.remove('hidden');
     disconnectBtn.classList.add('hidden');
     connStatus.textContent = 'Disconnected';
     connStatus.className = 'status-indicator disconnected';
+
+    // Hide device info panel & reset device name
+    const panel = document.getElementById('device-info-panel');
+    if (panel) panel.classList.add('hidden');
+    const stripName = document.getElementById('strip-device-name');
+    if (stripName) stripName.textContent = '--';
+
+    // Hide dashboard
+    dashboard.classList.add('hidden');
+
+    // Reset all displayed values to defaults
+    resetDashboard();
+}
+
+function resetDashboard() {
+    // Gauges
+    updateGauge('gauge-soc-path',  'val-soc',     0, 0, 100, '%', true);
+    updateGauge('gauge-volt-path', 'val-voltage',  0, 0, 100, '');
+    updateCenterGauge('gauge-curr-neg', 'gauge-curr-pos', 'val-current', 0, 50, '');
+
+    // Info row
+    const ids = ['val-rem-cap','val-rated-cap','val-soh','val-cycles',
+                 'val-battery-id','val-timestamp','val-device-id',
+                 'val-cell-max','val-cell-min','val-cell-avg'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '--'; });
+
+    // Temperatures
+    document.getElementById('val-temp-mos').textContent = '--°C';
+    document.getElementById('val-temp-amb').textContent = '--°C';
+    document.getElementById('sensor-list').innerHTML = '';
+
+    // Cells
+    document.getElementById('cell-list').innerHTML = '';
+
+    // Status tags
+    ['status-battery','status-protection','status-alarms','status-mos'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<span class="tag">None</span>';
+    });
+}
+
+function showDeviceInfo() {
+    const panel = document.getElementById('device-info-panel');
+    if (!panel) return;
+    panel.classList.remove('hidden');
+
+    // Device name — may be null for nameless BLE devices
+    const name = bleDevice.name || '(No advertised name)';
+    document.getElementById('ble-name').textContent = name;
+
+    // Device ID — browser-assigned identifier
+    // On Android Chrome this may resemble a MAC; on desktop it's a random UUID
+    const devId = bleDevice.id || '(Not available)';
+    document.getElementById('ble-device-id').textContent = devId;
+
+    // UUIDs from input fields
+    document.getElementById('ble-service-uuid').textContent = serviceUuidInput.value.toUpperCase();
+    document.getElementById('ble-tx-uuid').textContent = txUuidInput.value.toUpperCase();
+    document.getElementById('ble-rx-uuid').textContent = rxUuidInput.value.toUpperCase();
+
+    // Active protocol
+    document.getElementById('ble-protocol').textContent =
+        activePollingMode === 'ess' ? '⚡ ESS BMS (Modbus)' : '🔋 Smart BMS (JBD)';
+
+    // Connection timestamp
+    document.getElementById('ble-conn-time').textContent = new Date().toLocaleString();
 }
 
 function disconnectBluetooth() {
@@ -316,40 +402,58 @@ function parse_ess_response(response) {
 function parse_jbd_response(response, len) {
     const cmd = response[1];
     const data = jbdData;
+
     if (cmd === 0x03) {
+        // Basic info frame
         data.voltage_V = ((response[4] << 8) | response[5]) * 0.01;
         const cur_raw = (response[6] << 8) | response[7];
         data.current_A = (new Int16Array([cur_raw])[0]) * 0.01;
+        // JBD reports capacity in 10mAh units
         data.remaining_capacity_mAh = ((response[8] << 8) | response[9]) * 10;
-        data.rated_capacity_mAh = ((response[10] << 8) | response[11]) * 10;
+        data.rated_capacity_mAh    = ((response[10] << 8) | response[11]) * 10;
         data.cycle_count = (response[12] << 8) | response[13];
         data.protection_status = [response[18], response[19], 0, 0];
         data.SOC_percent = response[23];
         data.mos_status = [response[24], 0];
-        data.cell_count = response[25];
+        // NOTE: response[25] is the BMS configured series count — can be wrong for
+        // multi-string packs. We store it only as a hint; the 0x04 frame overrides it.
+        data.cell_count_hint = response[25];
         data.temp_sensor_count = response[26];
         data.temperature_C = [];
         for (let i = 0; i < data.temp_sensor_count; i++) {
-            data.temperature_C.push(((response[27+i*2] << 8) | response[28+i*2]) * 0.1 - 273.1);
+            data.temperature_C.push(((response[27 + i*2] << 8) | response[28 + i*2]) * 0.1 - 273.1);
         }
-        data.MOSFET_temperature = data.temperature_C[0] || 0;
-        data.ambient_temperature = data.temperature_C[0] || 0;
+        data.MOSFET_temperature = data.temperature_C[0] !== undefined ? data.temperature_C[0] : 0;
+        data.ambient_temperature = data.temperature_C[1] !== undefined ? data.temperature_C[1] : (data.temperature_C[0] || 0);
+        data.SOH_percent = '--'; // JBD basic frame has no SOH field
+
     } else if (cmd === 0x04) {
-        data.cell_count = response[3] / 2;
+        // Cell voltage frame — payload length byte (response[3]) = 2 * actual_cell_count
+        // This is the AUTHORITATIVE source for series cell count.
+        const actualCells = Math.floor(response[3] / 2);
+        data.cell_count = actualCells; // override whatever 0x03 said
         data.cell_voltages_V = [];
         let sum = 0;
-        for (let i = 0; i < data.cell_count; i++) {
-            let v = ((response[4+i*2] << 8) | response[5+i*2]) * 0.001;
-            data.cell_voltages_V.push(v); sum += v;
+        for (let i = 0; i < actualCells; i++) {
+            let v = ((response[4 + i*2] << 8) | response[5 + i*2]) * 0.001;
+            data.cell_voltages_V.push(v);
+            sum += v;
         }
-        data.avg_cell_vtg = sum / data.cell_count;
-        data.max_vtg_cell_value = Math.max(...data.cell_voltages_V);
-        data.min_vtg_cell_value = Math.min(...data.cell_voltages_V);
+        if (actualCells > 0) {
+            data.avg_cell_vtg       = sum / actualCells;
+            data.max_vtg_cell_value = Math.max(...data.cell_voltages_V);
+            data.min_vtg_cell_value = Math.min(...data.cell_voltages_V);
+            // Recalculate pack voltage from actual cells for sanity-check
+            data.voltage_V_cells    = sum;
+        }
+        log(`JBD: ${actualCells}S cells parsed (BMS hint was ${data.cell_count_hint || '?'}S)`);
+
     } else if (cmd === 0x05) {
-        let name_len = response[3];
-        data.battery_id = "";
-        for (let i = 0; i < name_len; i++) data.battery_id += String.fromCharCode(response[4+i]);
+        const name_len = response[3];
+        data.battery_id = '';
+        for (let i = 0; i < name_len; i++) data.battery_id += String.fromCharCode(response[4 + i]);
     }
+
     updateUI(data, 'ev');
 }
 

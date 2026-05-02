@@ -54,7 +54,49 @@
             </div>
         </details>
 
+        <!-- Device Info Panel (shown after connect) -->
+        <section id="device-info-panel" class="glass-panel hidden" style="padding: 12px 16px; margin-bottom: 10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <span style="font-size:0.8rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.05em;">📡 BLE DEVICE INFO</span>
+                <span id="ble-conn-dot" style="width:8px;height:8px;border-radius:50%;background:var(--success-color);display:inline-block;box-shadow:0 0 6px var(--success-color);"></span>
+            </div>
+            <div class="ble-info-grid">
+                <div class="ble-info-row">
+                    <span class="ble-info-label">Device Name</span>
+                    <span class="ble-info-val" id="ble-name">--</span>
+                </div>
+                <div class="ble-info-row">
+                    <span class="ble-info-label">Device ID <span style="font-size:0.65rem;opacity:0.6;">(browser assigned)</span></span>
+                    <span class="ble-info-val mono" id="ble-device-id">--</span>
+                </div>
+                <div class="ble-info-row">
+                    <span class="ble-info-label">Service UUID</span>
+                    <span class="ble-info-val mono" id="ble-service-uuid">--</span>
+                </div>
+                <div class="ble-info-row">
+                    <span class="ble-info-label">TX UUID (Write)</span>
+                    <span class="ble-info-val mono" id="ble-tx-uuid">--</span>
+                </div>
+                <div class="ble-info-row">
+                    <span class="ble-info-label">RX UUID (Notify)</span>
+                    <span class="ble-info-val mono" id="ble-rx-uuid">--</span>
+                </div>
+                <div class="ble-info-row">
+                    <span class="ble-info-label">Protocol</span>
+                    <span class="ble-info-val" id="ble-protocol">--</span>
+                </div>
+                <div class="ble-info-row">
+                    <span class="ble-info-label">Connected At</span>
+                    <span class="ble-info-val" id="ble-conn-time">--</span>
+                </div>
+            </div>
+            <p style="font-size:0.65rem;color:var(--text-secondary);margin-top:8px;opacity:0.6;">⚠ Web Bluetooth API does not expose hardware MAC addresses for privacy reasons. Device ID is browser-assigned.</p>
+        </section>
+
         <main id="dashboard" class="dashboard hidden">
+            <!-- Device Name Line -->
+            <div id="strip-device-name" class="device-name-line">--</div>
+
             <!-- Main SOC Gauge -->
             <section class="card glass-panel text-center">
                 <div class="gauge-container large">
